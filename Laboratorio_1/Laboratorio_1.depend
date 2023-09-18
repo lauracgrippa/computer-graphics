@@ -1,0 +1,71 @@
+# depslib dependency file v1.0
+1694991465 source:c:\users\i589602\onedrive - sap se\documents\fcg\laboratorios\laboratorio_1\219351\main-fan.cpp
+	<cmath>
+	<cstdio>
+	<cstdlib>
+	<string>
+	<fstream>
+	<sstream>
+	<glad/glad.h>
+	<GLFW/glfw3.h>
+	"utils.h"
+
+1694984443 c:\users\i589602\onedrive - sap se\documents\fcg\laboratorios\laboratorio_1\include\glad\glad.h
+	<windows.h>
+	<stddef.h>
+	<KHR/khrplatform.h>
+	<inttypes.h>
+	<inttypes.h>
+	<inttypes.h>
+	<stdint.h>
+	<stdint.h>
+	<inttypes.h>
+
+1694984443 c:\users\i589602\onedrive - sap se\documents\fcg\laboratorios\laboratorio_1\include\khr\khrplatform.h
+	<sys/cdefs.h>
+	<stdint.h>
+	<inttypes.h>
+	<stdint.h>
+
+1694984443 c:\users\i589602\onedrive - sap se\documents\fcg\laboratorios\laboratorio_1\include\glfw\glfw3.h
+	<stddef.h>
+	<stdint.h>
+	<OpenGL/gl3.h>
+	<OpenGL/gl3ext.h>
+	<OpenGL/gl.h>
+	<OpenGL/glu.h>
+	<GL/glcorearb.h>
+	<GLES/gl.h>
+	<GLES/glext.h>
+	<GLES2/gl2.h>
+	<GLES2/gl2ext.h>
+	<GLES3/gl3.h>
+	<GLES2/gl2ext.h>
+	<GLES3/gl31.h>
+	<GLES2/gl2ext.h>
+	<vulkan/vulkan.h>
+	<GL/gl.h>
+	<GL/glext.h>
+	<GL/glu.h>
+
+1694984443 c:\users\i589602\onedrive - sap se\documents\fcg\laboratorios\laboratorio_1\include\utils.h
+
+1694984443 source:c:\users\i589602\onedrive - sap se\documents\fcg\laboratorios\laboratorio_1\src\glad.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<glad/glad.h>
+	<windows.h>
+	<dlfcn.h>
+
+1694998933 source:c:\users\i589602\onedrive - sap se\documents\fcg\laboratorios\laboratorio_1\src\main.cpp
+	<cmath>
+	<cstdio>
+	<cstdlib>
+	<string>
+	<fstream>
+	<sstream>
+	<glad/glad.h>
+	<GLFW/glfw3.h>
+	"utils.h"
+

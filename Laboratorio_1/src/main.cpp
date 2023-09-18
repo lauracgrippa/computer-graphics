@@ -1,20 +1,12 @@
-////////////////////////////////////////////////
-//                                            //
-// Universidade Federal do Rio Grande do Sul  //
-// Instituto de Informática                   //
-// Departamento de Informática Aplicada       //
-//                                            //
-// INF01047 Fundamentos de Computação Gráfica //
-// Prof. Eduardo Gastal                       //
-//                                            //
-////////////////////////////////////////////////
-//                                            //
-// LABORATÓRIO 1                              //
-// Tarefa 2: Primeira Parte                   //
-//                                            //
-// Aluna Laura Cárdenas Grippa                //
-//                                            //
-////////////////////////////////////////////////
+//     Universidade Federal do Rio Grande do Sul
+//             Instituto de Informática
+//       Departamento de Informática Aplicada
+//
+//    INF01047 Fundamentos de Computação Gráfica
+//               Prof. Eduardo Gastal
+//
+//                   LABORATÓRIO 1
+//
 
 // Arquivos "headers" padrões de C podem ser incluídos em um
 // programa C++, sendo necessário somente adicionar o caractere
@@ -42,6 +34,7 @@
 // Declaração de várias funções utilizadas em main().  Essas estão definidas
 // logo após a definição de main() neste arquivo.
 GLuint BuildTriangles(); // Constrói triângulos para renderização
+void LoadShadersFromFiles(); // Carrega os shaders de vértice e fragmento, criando um programa de GPU
 GLuint LoadShader_Vertex(const char* filename);   // Carrega um vertex shader
 GLuint LoadShader_Fragment(const char* filename); // Carrega um fragment shader
 void LoadShader(const char* filename, GLuint shader_id); // Função utilizada pelas duas acima
@@ -51,7 +44,10 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id); // 
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void ErrorCallback(int error, const char* description);
-void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod);
+
+// Variáveis que definem um programa de GPU (shaders). Veja função LoadShadersFromFiles().
+GLuint g_GpuProgramID = 0;
 
 int main()
 {
@@ -82,7 +78,7 @@ int main()
     // Criamos uma janela do sistema operacional, com 500 colunas e 500 linhas
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
-    window = glfwCreateWindow(500, 500, "INF01047 - 00219351 - Laura Cárdenas Grippa", NULL, NULL);
+    window = glfwCreateWindow(500, 500, "INF01047 - Seu Cartao - Seu Nome", NULL, NULL);
     if (!window)
     {
         glfwTerminate();
@@ -115,33 +111,9 @@ int main()
     printf("GPU: %s, %s, OpenGL %s, GLSL %s\n", vendor, renderer, glversion, glslversion);
 
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
-    // para renderização. Veja slides 176-196 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
+    // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
     //
-    // Note que o caminho para os arquivos "shader_vertex.glsl" e
-    // "shader_fragment.glsl" estão fixados, sendo que assumimos a existência
-    // da seguinte estrutura no sistema de arquivos:
-    //
-    //    + FCG_Lab_0X/
-    //    |
-    //    +--+ bin/
-    //    |  |
-    //    |  +--+ Release/  (ou Debug/ ou Linux/)
-    //    |     |
-    //    |     o-- main.exe
-    //    |
-    //    +--+ src/
-    //       |
-    //       o-- shader_vertex.glsl
-    //       |
-    //       o-- shader_fragment.glsl
-    //       |
-    //       o-- ...
-    //
-    GLuint vertex_shader_id = LoadShader_Vertex("../../src/shader_vertex.glsl");
-    GLuint fragment_shader_id = LoadShader_Fragment("../../src/shader_fragment.glsl");
-
-    // Criamos um programa de GPU utilizando os shaders carregados acima
-    GLuint program_id = CreateGpuProgram(vertex_shader_id, fragment_shader_id);
+    LoadShadersFromFiles();
 
     // Construímos a representação de um triângulo
     GLuint vertex_array_object_id = BuildTriangles();
@@ -164,7 +136,7 @@ int main()
 
         // Pedimos para a GPU utilizar o programa de GPU criado acima (contendo
         // os shaders de vértice e fragmentos).
-        glUseProgram(program_id);
+        glUseProgram(g_GpuProgramID);
 
         // "Ligamos" o VAO. Informamos que queremos utilizar os atributos de
         // vértices apontados pelo VAO criado pela função BuildTriangles(). Veja
@@ -174,13 +146,13 @@ int main()
         // Pedimos para a GPU rasterizar os vértices apontados pelo VAO como
         // triângulos.
         //
-        //                +--- Veja slides 124-130 do documento Aula_04_Modelagem_Geometrica_3D.pdf.
+        //                +--- Veja slides 182-188 do documento Aula_04_Modelagem_Geometrica_3D.pdf.
         //                |          +--- O array "indices[]" contém 6 índices (veja função BuildTriangles()).
         //                |          |  +--- Os índices são do tipo "GLubyte" (8 bits sem sinal)
         //                |          |  |                 +--- Vértices começam em indices[0] (veja função BuildTriangles()).
         //                |          |  |                 |
         //                V          V  V                 V
-        glDrawElements(GL_TRIANGLE_FAN, 48, GL_UNSIGNED_BYTE, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_BYTE, 0);
 
         // "Desligamos" o VAO, evitando assim que operações posteriores venham a
         // alterar o mesmo. Isso evita bugs.
@@ -204,6 +176,7 @@ int main()
     // Finalizamos o uso dos recursos do sistema operacional
     glfwTerminate();
 
+    // Fim do programa
     return 0;
 }
 
@@ -214,34 +187,21 @@ GLuint BuildTriangles()
 
     // A posição de cada vértice é definida por coeficientes em "normalized
     // device coordinates" (NDC), onde cada coeficiente está entre -1 e 1.
-    // (Veja slides 129-132 e 138-145 do documento Aula_03_Rendering_Pipeline_Grafico.pdf).
+    // (Veja slides 131-134 e 141-148 do documento Aula_03_Rendering_Pipeline_Grafico.pdf).
     // Nas aulas sobre transformações geométrica veremos como transformar
     // coeficientes em outros sistemas de coordenadas para coeficientes NDC.
     //
     // Note que aqui adicionamos um quarto coeficiente W (igual a 1.0).
     // Conversaremos sobre isso quando tratarmos de coordenadas homogêneas.
     //
-    // Este vetor "NDC_coefficients" define a GEOMETRIA (veja slides 64-71 do documento Aula_04_Modelagem_Geometrica_3D.pdf).
+    // Este vetor "NDC_coefficients" define a GEOMETRIA (veja slides 103-110 do documento Aula_04_Modelagem_Geometrica_3D.pdf).
     //
     GLfloat NDC_coefficients[] = {
     //    X      Y     Z     W
-         0.0f,          0.0f,        0.0f, 1.0f,
-         0.7f,          0.0f,        0.0f, 1.0f,
-         0.646716f,     0.2678781,   0.0f, 1.0f,
-         0.4949749f,    0.4949749f,  0.0f, 1.0f,
-         0.2678781f,    0.646716f,   0.0f, 1.0f,
-         0.0f,          0.7f,        0.0f, 1.0f,
-         -0.2678781f,   0.646716f,   0.0f, 1.0f,
-         -0.4949749f,   0.4949749f,  0.0f, 1.0f,
-         -0.646716f,    0.2678781f,  0.0f, 1.0f,
-         -0.7f,         0.0f,        0.0f, 1.0f,
-         -0.646716f,    -0.2678781f, 0.0f, 1.0f,
-         -0.4949749f,   -0.4949749f, 0.0f, 1.0f,
-         -0.2678781f,   -0.646716f,  0.0f, 1.0f,
-         0.0f,          -0.7f,       0.0f, 1.0f,
-         0.2678781f,    -0.646716f,  0.0f, 1.0f,
-         0.4949749f,    -0.4949749f, 0.0f, 1.0f,
-         0.646716f,     -0.2678781f, 0.0f, 1.0f
+        -0.5f, -0.5f, 0.0f, 1.0f,
+         0.5f, -0.5f, 0.0f, 1.0f,
+         0.0f,  0.5f, 0.0f, 1.0f,
+         0.5f,  0.5f, 0.0f, 1.0f
     };
 
     // Criamos o identificador (ID) de um Vertex Buffer Object (VBO).  Um VBO é
@@ -314,29 +274,16 @@ GLuint BuildTriangles()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
     // Agora repetimos todos os passos acima para atribuir um novo atributo a
-    // cada vértice: uma cor (veja slides 107-110 do documento Aula_03_Rendering_Pipeline_Grafico.pdf e slide 72 do documento Aula_04_Modelagem_Geometrica_3D.pdf).
+    // cada vértice: uma cor (veja slides 109-112 do documento Aula_03_Rendering_Pipeline_Grafico.pdf e slide 111 do documento Aula_04_Modelagem_Geometrica_3D.pdf).
     // Tal cor é definida como coeficientes RGBA: Red, Green, Blue, Alpha;
     // isto é: Vermelho, Verde, Azul, Alpha (valor de transparência).
     // Conversaremos sobre sistemas de cores nas aulas de Modelos de Iluminação.
     GLfloat color_coefficients[] = {
     //  R     G     B     A
         1.0f, 0.0f, 0.0f, 1.0f,
+        0.0f, 1.0f, 0.0f, 1.0f,
         0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, 1.0f, 1.0f
+        0.0f, 1.0f, 1.0f, 1.0f
     };
     GLuint VBO_color_coefficients_id;
     glGenBuffers(1, &VBO_color_coefficients_id);
@@ -352,28 +299,11 @@ GLuint BuildTriangles()
     // Vamos então definir dois triângulos utilizando os vértices do array
     // NDC_coefficients. O primeiro triângulo é formado pelos vértices 0,1,2;
     // e o segundo pelos vértices 2,1,3. Note que usaremos o modo de renderização
-    // GL_TRIANGLES na chamada glDrawElements() dentro de main(). Veja slides 124-130 do documento Aula_04_Modelagem_Geometrica_3D.pdf.
+    // GL_TRIANGLES na chamada glDrawElements() dentro de main(). Veja slides 182-188 do documento Aula_04_Modelagem_Geometrica_3D.pdf.
     //
-    // Este vetor "indices" define a TOPOLOGIA (veja slides 64-71 do documento Aula_04_Modelagem_Geometrica_3D.pdf).
+    // Este vetor "indices" define a TOPOLOGIA (veja slides 103-110 do documento Aula_04_Modelagem_Geometrica_3D.pdf).
     //
-    GLubyte indices[] = {
-        0,1,2,
-        0,2,3,
-        0,3,4,
-        0,4,5,
-        0,5,6,
-        0,6,7,
-        0,7,8,
-        0,8,9,
-        0,9,10,
-        0,10,11,
-        0,11,12,
-        0,12,13,
-        0,13,14,
-        0,14,15,
-        0,15,16,
-        0,16,1
-    }; // GLubyte: valores entre 0 e 255 (8 bits sem sinal).
+    GLubyte indices[] = { 0,1,2, 2,1,3 }; // GLubyte: valores entre 0 e 255 (8 bits sem sinal).
 
     // Criamos um buffer OpenGL para armazenar os índices acima
     GLuint indices_id;
@@ -404,7 +334,7 @@ GLuint BuildTriangles()
     return vertex_array_object_id;
 }
 
-// Carrega um Vertex Shader de um arquivo. Veja definição de LoadShader() abaixo.
+// Carrega um Vertex Shader de um arquivo GLSL. Veja definição de LoadShader() abaixo.
 GLuint LoadShader_Vertex(const char* filename)
 {
     // Criamos um identificador (ID) para este shader, informando que o mesmo
@@ -418,7 +348,7 @@ GLuint LoadShader_Vertex(const char* filename)
     return vertex_shader_id;
 }
 
-// Carrega um Fragment Shader de um arquivo. Veja definição de LoadShader() abaixo.
+// Carrega um Fragment Shader de um arquivo GLSL . Veja definição de LoadShader() abaixo.
 GLuint LoadShader_Fragment(const char* filename)
 {
     // Criamos um identificador (ID) para este shader, informando que o mesmo
@@ -502,6 +432,40 @@ void LoadShader(const char* filename, GLuint shader_id)
     delete [] log;
 }
 
+// Função que carrega os shaders de vértices e de fragmentos que serão
+// utilizados para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
+//
+void LoadShadersFromFiles()
+{
+    // Note que o caminho para os arquivos "shader_vertex.glsl" e
+    // "shader_fragment.glsl" estão fixados, sendo que assumimos a existência
+    // da seguinte estrutura no sistema de arquivos:
+    //
+    //    + FCG_Lab_01/
+    //    |
+    //    +--+ bin/
+    //    |  |
+    //    |  +--+ Release/  (ou Debug/ ou Linux/)
+    //    |     |
+    //    |     o-- main.exe
+    //    |
+    //    +--+ src/
+    //       |
+    //       o-- shader_vertex.glsl
+    //       |
+    //       o-- shader_fragment.glsl
+    //
+    GLuint vertex_shader_id = LoadShader_Vertex("../../src/shader_vertex.glsl");
+    GLuint fragment_shader_id = LoadShader_Fragment("../../src/shader_fragment.glsl");
+
+    // Deletamos o programa de GPU anterior, caso ele exista.
+    if ( g_GpuProgramID != 0 )
+        glDeleteProgram(g_GpuProgramID);
+
+    // Criamos um programa de GPU utilizando os shaders carregados acima.
+    g_GpuProgramID = CreateGpuProgram(vertex_shader_id, fragment_shader_id);
+}
+
 // Esta função cria um programa de GPU, o qual contém obrigatoriamente um
 // Vertex Shader e um Fragment Shader.
 GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id)
@@ -557,21 +521,21 @@ void FramebufferSizeCallback(GLFWwindow* window, int width, int height)
     // Indicamos que queremos renderizar em toda região do framebuffer. A
     // função "glViewport" define o mapeamento das "normalized device
     // coordinates" (NDC) para "pixel coordinates".  Essa é a operação de
-    // "Screen Mapping" ou "Viewport Mapping" vista em aula (slides 138-145 do documento Aula_03_Rendering_Pipeline_Grafico.pdf).
+    // "Screen Mapping" ou "Viewport Mapping" vista em aula (slides 141-148 do documento Aula_03_Rendering_Pipeline_Grafico.pdf).
     glViewport(0, 0, width, height);
 }
 
 // Definição da função que será chamada sempre que o usuário pressionar alguma
 // tecla do teclado. Veja http://www.glfw.org/docs/latest/input_guide.html#input_key
-void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
+void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 {
-    // ===============
+    // ==================
     // Não modifique este loop! Ele é utilizando para correção automatizada dos
     // laboratórios. Deve ser sempre o primeiro comando desta função KeyCallback().
     for (int i = 0; i < 10; ++i)
-        if (key == GLFW_KEY_0 + i && action == GLFW_PRESS && mode == GLFW_MOD_SHIFT)
+        if (key == GLFW_KEY_0 + i && action == GLFW_PRESS && mod == GLFW_MOD_SHIFT)
             std::exit(100 + i);
-    // ===============
+    // ==================
 
     // Se o usuário pressionar a tecla ESC, fechamos a janela.
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
